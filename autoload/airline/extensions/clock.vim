@@ -46,11 +46,30 @@ if v:version < 800
   finish
 endif
 
+let g:stop_clock = 
+      \[g:airline_mode_map['v'], g:airline_mode_map[''], g:airline_mode_map['V'],
+      \ g:airline_mode_map['multi'] ]
+
 function! airline#extensions#clock#timerfn(timer)
-  if mode() !=? "c" && g:airline_mode_map.multi !=? w:airline_current_mode
+  if state('S') == '' && (exists('w:airline_current_mode') && index(g:stop_clock, w:airline_current_mode) == -1 )
+  " When nothing is pending, waitting for the user to type , or when
+  " 'incsearch' is abled or you are in mult-cursor mode, the clock will not
+  " update to avoid affecting screen display
     call airline#update_statusline()
   endif
 endfunction
+
+augroup StopClockInVisualMode
+  au ModeChanged [cvV\x16]*:* call timer_pause(g:airline#extensions#clock#timer, 0)
+  au ModeChanged *:[cvV\x16]* call timer_pause(g:airline#extensions#clock#timer, 1)
+  au WinEnter,WinLeave * {
+    if mode() =~# '^[vV\x16]'
+      call timer_pause(g:airline#extensions#clock#timer, 1)
+    else
+      call timer_pause(g:airline#extensions#clock#timer, 0)
+    endif
+  }
+augroup END
 
 let g:airline#extensions#clock#timer = timer_start(
       \ g:airline#extensions#clock#updatetime,
